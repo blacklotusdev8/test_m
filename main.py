@@ -8,4 +8,4 @@ if __name__ == "__main__":
     path = os.getenv("MCP_PATH", "/mcp")
     host = os.getenv("HOST", "0.0.0.0")
     # Run FastMCP over streamable HTTP so it can be accessed by web clients / Smithery
-    server.run(transport="http", host=host, port=port, path=path)
+    server.run(transport="http" ,port=port, path=path)
