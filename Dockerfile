@@ -29,4 +29,5 @@ RUN uv run scrapling install -f || uv run scrapling install
 EXPOSE 8081
 
 # Start the server over Streamable HTTP
-CMD ["uv", "run", "dev"]
+#/app/src/hello_server/server.py
+CMD ["uv", "run", "python", "-m", "src.hello_server.server"]

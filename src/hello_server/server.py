@@ -41,3 +41,8 @@ def create_server():
         return page.content    
 
     return server
+
+
+if __name__ == "__main__":
+    server = create_server()
+    server.run(transport="streamable-http")
