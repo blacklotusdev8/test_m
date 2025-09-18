@@ -12,7 +12,7 @@ COPY uv.lock .
 
 # Copy application source
 COPY src/ ./src/
-COPY main.py ./
+#COPY main.py ./
 
 # Install Python dependencies into a virtualenv managed by uv
 # Using non-frozen sync so new deps added to pyproject can be resolved during build
@@ -29,4 +29,4 @@ RUN uv run scrapling install -f || uv run scrapling install
 EXPOSE 8081
 
 # Start the server over Streamable HTTP
-CMD ["uv", "run", "python", "src/hello_server/server.py"]
+CMD ["uv", "run", "dev"]
