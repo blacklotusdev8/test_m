@@ -1,6 +1,5 @@
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import BaseModel, Field
-from scrapling.fetchers import StealthyFetcher #docs in https://scrapling.readthedocs.io/en/latest/
+from scrapling.fetchers import StealthyFetcher 
 from playwright.sync_api import Page
 from smithery.decorators import smithery
 
