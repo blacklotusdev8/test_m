@@ -3,6 +3,7 @@ from scrapling.fetchers import StealthyFetcher
 from playwright.sync_api import Page
 from smithery.decorators import smithery
 
+
 @smithery.server()
 def create_server():
     """Create and configure the MCP server."""
@@ -11,13 +12,10 @@ def create_server():
     @server.tool()
     def hello(name: str, ctx: Context) -> str:
         """Say hello to someone."""
-        session_config = ctx.session_config
-        if session_config.pirate_mode:
-            return f"Ahoy, {name}!"
-        else:
-            return f"Hello, {name}!"
+        
+        return f"Hello, {name}!"
     @server.tool()
-    def scrape(url: str, ctx: Context) -> str:
+    async def scrape(url: str, ctx: Context) -> str:
         """Scrape a website."""
         try:
             def scroll_page(page: Page):
@@ -25,7 +23,7 @@ def create_server():
                 page.mouse.move(100, 400)
                 page.mouse.up()
 
-            page = StealthyFetcher.fetch(
+            page = await StealthyFetcher.fetch(
                 url,
                 page_action=scroll_page
             )
