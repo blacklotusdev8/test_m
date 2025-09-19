@@ -4,3 +4,7 @@ build:
   dockerBuildPath: "."               # Docker build context
 startCommand:
   type: "http"
+  path: "/mcp"                       # Explicit MCP endpoint path
+env:
+  PORT: "8081"
+  HOST: "0.0.0.0"
