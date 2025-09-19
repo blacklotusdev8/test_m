@@ -7,4 +7,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8081"))
     # Run Streamable HTTP (MCP endpoint path defaults to /mcp)
     print(f"Starting FastMCP HTTP server on port {port} ...", flush=True)
-    server.run(transport="http", port=port)
+    server.run(transport="streamable-http")

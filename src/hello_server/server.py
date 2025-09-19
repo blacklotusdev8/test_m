@@ -8,6 +8,7 @@ from typing import Any
 def create_server():
     """Create and configure the MCP server."""
     server = FastMCP("Say Hello")
+    
     @server.tool()
     def hello(name: str, ctx: Context) -> str:
         """Say hello to someone."""
@@ -51,4 +52,4 @@ def create_server():
 
 if __name__ == "__main__":
     server = create_server()
-    server.run(transport="http", port=8081)
+    server.run(transport="streamable-http")
