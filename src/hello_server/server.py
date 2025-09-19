@@ -52,9 +52,9 @@ def create_server():
                             page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
-                            return page.get_all_text()
+                            return "res1"+ page.get_all_text()
                         if hasattr(page, "content"):
-                            return page.content  # type: ignore[attr-defined]
+                            return "res2"+ page.content  # type: ignore[attr-defined]
                     except Exception as e:
                         errors.append(f"DynamicFetcher: {e}")
 
@@ -68,9 +68,9 @@ def create_server():
                             page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
-                            return page.get_all_text()
+                            return "res3"+ page.get_all_text()
                         if hasattr(page, "content"):
-                            return page.content  # type: ignore[attr-defined]
+                            return "res4"+page.content  # type: ignore[attr-defined]
                     except Exception as e:
                         errors.append(f"StealthyFetcher: {e}")
 
@@ -81,12 +81,12 @@ def create_server():
                 try:
                     resp = Fetcher.fetch(url)
                     if hasattr(resp, "get_all_text"):
-                        return resp.get_all_text()
+                        return "res5"+ resp.get_all_text()
                     if hasattr(resp, "text"):
-                        return resp.text  # type: ignore[attr-defined]
+                        return "res6"+resp.text  # type: ignore[attr-defined]
                     if hasattr(resp, "content"):
-                        return resp.content  # type: ignore[attr-defined]
-                    return str(resp)
+                        return "res7"+resp.content  # type: ignore[attr-defined]
+                    return "res8"+ str(resp)
                 except Exception as e:
                     errors.append(f"Fetcher: {e}")
                     return "All fetchers failed: " + " | ".join(errors)
