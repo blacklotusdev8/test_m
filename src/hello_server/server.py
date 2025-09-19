@@ -15,7 +15,7 @@ def create_server():
         
         return f"Hello, {name}!"
     @server.tool()
-    async def scrape(url: str, ctx: Context) -> str:
+    async def scrape(url: str) -> str:
         """Scrape a website."""
         try:
             loop = asyncio.get_running_loop()
@@ -44,7 +44,16 @@ def create_server():
             result = await loop.run_in_executor(None, scrape_generate_text)
             return result
         except Exception as e:
-            return str(e)
+            from playwright.sync_api import Page  # type: ignore
+            from scrapling.fetchers import StealthyFetcher  # type: ignore
+
+            page = StealthyFetcher.fetch(
+                    url,
+                    solve_cloudflare=True,
+                    headless=True,
+                )
+            
+            return f"error {e}"+f"\n {page.get_all_text()}"
         
     
     return server

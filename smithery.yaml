@@ -1,10 +1,9 @@
-runtime: "container"
+runtime: container
 build:
-  dockerfile: "Dockerfile"           # Path to your Dockerfile
-  dockerBuildPath: "."               # Docker build context
+  dockerfile: Dockerfile       # Path to your Dockerfile
+  dockerBuildPath: .               # Docker build context
 startCommand:
   type: "http"
-  path: "/mcp"                       # Explicit MCP endpoint path
-env:
-  PORT: "8081"
-  HOST: "0.0.0.0"
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    {}
