@@ -240,6 +240,36 @@ def create_server():
                 'raw_sources_text': raw_sources_text
             }
 
+        def chack_RooBot_Box(page: Any):
+            print("chack_RooBot_Box")
+            try:
+                page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=500)
+            except Exception as e:
+                print(f"Could not accept cookies: {e}")
+            print("accept cookies")
+
+            sleep(16)
+            try:
+                print("Looking for div.transition-opacity element...")
+                page.wait_for_selector(SEL_TRANSITION_OPACITY, state="visible", timeout=600)
+                element = page.locator(SEL_TRANSITION_OPACITY).first
+                box = element.bounding_box()
+                if box:
+                    center_x = box["x"] + box["width"] / 2
+                    center_y = box["y"] + box["height"] / 2
+                    page.mouse.click(center_x, center_y)
+                    print(f"Clicked on center of div.transition-opacity at ({center_x}, {center_y})")
+                else:
+                    print("Could not get bounding box for div.transition-opacity")
+            except Exception as e:
+                print(f"div.transition-opacity element not found or timeout - continuing... Error: {e}")
+            try:
+                page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=500)
+            except Exception as e:
+                print(f"Could not accept cookies: {e}")
+            
+
+
         def run_session(rt: str, prompt: str) -> dict:
             # Choose target URL
             target_url = url
@@ -252,34 +282,11 @@ def create_server():
                 print("page wait for 15 seconds")
                 sleep(15)
                 print("start automate")
-                try:
-                    page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=5000)
-                except Exception as e:
-                    print(f"Could not accept cookies: {e}")
-                print("accept cookies")
-
-                sleep(16)
-                try:
-                    print("Looking for div.transition-opacity element...")
-                    page.wait_for_selector(SEL_TRANSITION_OPACITY, state="visible", timeout=6000)
-                    element = page.locator(SEL_TRANSITION_OPACITY).first
-                    box = element.bounding_box()
-                    if box:
-                        center_x = box["x"] + box["width"] / 2
-                        center_y = box["y"] + box["height"] / 2
-                        page.mouse.click(center_x, center_y)
-                        print(f"Clicked on center of div.transition-opacity at ({center_x}, {center_y})")
-                    else:
-                        print("Could not get bounding box for div.transition-opacity")
-                except Exception as e:
-                    print(f"div.transition-opacity element not found or timeout - continuing... Error: {e}")
-                try:
-                    page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=5000)
-                except Exception as e:
-                    print(f"Could not accept cookies: {e}")
+                chack_RooBot_Box(page)
 
                 if rt == "image" and image_path and os.path.exists(image_path):
                     try:
+                        chack_RooBot_Box(page)
                         input_file = page.locator('input[type="file"][accept*="image"]').all()
                         print("get input_file")
                         for i in input_file:
@@ -289,11 +296,14 @@ def create_server():
                             except Exception as e:
                                 print(f"Could not set input file: {e}")
                     except Exception as e:
+                        chack_RooBot_Box(page)
                         print(f"Error locating image input: {e}")
                 else:
+                    chack_RooBot_Box(page)
                     print("waiting for text response")
 
                 try:
+                    chack_RooBot_Box(page)
                     page.wait_for_selector(SEL_INPUT, state="visible", timeout=10000)
                     page.locator(SEL_INPUT).fill(prompt)
                 except Exception as e:
@@ -312,11 +322,6 @@ def create_server():
                     page.locator(SEL_OK_BUTTON).click()
                 except Exception as e:
                     print("OK button not found or click failed - continuing...", e)
-
-                try:
-                    page.screenshot(path="screenshot.png", full_page=True)
-                except Exception:
-                    pass
 
                 return page
 
@@ -380,18 +385,24 @@ def create_server():
 
     @server.tool()
     async def arena_text(user_message: str, ctx: Context) -> dict:
-        """Run an ai text session and return cleaned content and sources."""
+        """Send text to AI and receive response with cleaned content and sources."""
         return await arena_session("text", user_message, None, ctx)
 
     @server.tool()
     async def arena_search(user_message: str, ctx: Context) -> dict:
-        """Run an ai search session and return cleaned content and sources."""
+        """Search the web and return cleaned text response with sources."""
         return await arena_session("search", user_message, None, ctx)
 
     @server.tool()
     async def arena_image(user_message: str, image_path: str, ctx: Context) -> dict:
-        """Run an ai image session and return cleaned content, sources, and image URLs.
-        image_path: local path to an image file to upload.
+        """Generate AI images from text prompts and return image URLs.
+        
+        Args:
+            user_message: Text prompt describing the image to generate
+            image_path: Local path to an image file to upload for reference or style transfer
+            
+        Returns:
+            Dictionary containing generated image URLs and metadata
         """
         return await arena_session("image", user_message, image_path, ctx)
     @server.tool()
