@@ -247,8 +247,6 @@ def create_server():
             except Exception as e:
                 print(f"Could not accept cookies: {e}")
             print("accept cookies")
-
-            sleep(16)
             try:
                 print("Looking for div.transition-opacity element...")
                 page.wait_for_selector(SEL_TRANSITION_OPACITY, state="visible", timeout=600)
@@ -279,8 +277,8 @@ def create_server():
                 target_url = url_web_search
 
             def automate(page: Any):
-                print("page wait for 15 seconds")
-                sleep(15)
+                print("page wait for 5 seconds")
+                sleep(5)
                 print("start automate")
                 chack_RooBot_Box(page)
 
