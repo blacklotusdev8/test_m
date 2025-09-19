@@ -12,7 +12,7 @@ COPY uv.lock .
 
 # Copy application source
 COPY src/ ./src/
-#COPY main.py ./
+COPY main.py ./
 
 # Install Python dependencies into a virtualenv managed by uv
 # Using non-frozen sync so new deps added to pyproject can be resolved during build
@@ -22,7 +22,7 @@ RUN uv sync
 RUN uv run playwright install --with-deps
 
 # Install Scrapling browser dependencies (Camoufox, etc.)
-RUN uv run camoufox fetch
+#RUN uv run camoufox fetch
 # Use -f to force reinstall if needed; fall back to plain install if -f is unsupported
 RUN uv run scrapling install -f || uv run scrapling install
 
@@ -30,5 +30,4 @@ RUN uv run scrapling install -f || uv run scrapling install
 EXPOSE 8081
 
 # Start the server over Streamable HTTP
-#/app/src/hello_server/server.py
-CMD ["uv", "run", "python", "-m", "src.hello_server.server"]
+CMD ["uv", "run", "python", "main.py"]
