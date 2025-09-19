@@ -31,4 +31,4 @@ EXPOSE 8081
 
 # Start the server over Streamable HTTP
 #/app/src/hello_server/server.py
-CMD ["uv", "run", "python", "-m", "src.hello_server.server"]
+CMD ["uv", "run", "python", "-m", "src/hello_server/server.py"]
