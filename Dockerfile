@@ -22,6 +22,7 @@ RUN uv sync
 RUN uv run playwright install --with-deps
 
 # Install Scrapling browser dependencies (Camoufox, etc.)
+RUN uv camoufox fetch
 # Use -f to force reinstall if needed; fall back to plain install if -f is unsupported
 RUN uv run scrapling install -f || uv run scrapling install
 
