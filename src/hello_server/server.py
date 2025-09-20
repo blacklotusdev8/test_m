@@ -206,7 +206,6 @@ def create_server():
                         except:
                             pass
                         
-                        sleep(16)
                         
                         # Click transition overlay if present
                         try:
@@ -217,6 +216,29 @@ def create_server():
                                 center_x = box["x"] + box["width"] / 2
                                 center_y = box["y"] + box["height"] / 2
                                 page.mouse.click(center_x, center_y)
+                        except:
+                            pass
+                        
+                        # Accept cookies if present
+                        try:
+                            page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=5000)
+                        except:
+                            pass
+                        
+                        
+                        # Click transition overlay if present
+                        try:
+                            page.wait_for_selector(SEL_TRANSITION_OPACITY, state="visible", timeout=6000)
+                            element = page.locator(SEL_TRANSITION_OPACITY).first
+                            box = element.bounding_box()
+                            if box:
+                                center_x = box["x"] + box["width"] / 2
+                                center_y = box["y"] + box["height"] / 2
+                                page.mouse.click(center_x, center_y)
+                        except:
+                            pass
+                        try:
+                            page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=5000)
                         except:
                             pass
                         
@@ -239,7 +261,7 @@ def create_server():
                                                 page.get_by_text("seedream-4").first.click(timeout=5000)
                                             except:
                                                 try:
-                                                    page.get_by_text("gpt-image-1").first.click(timeout=5000)
+                                                    page.get_by_text("flux-1-kontext-pro").first.click(timeout=5000)
                                                 except:
                                                     page.get_by_text("qwen-image-edit").first.click(timeout=5000)
                                             break
@@ -301,7 +323,7 @@ def create_server():
                         google_search=True,
                         humanize=True,
                         solve_cloudflare=True,
-                        headless=True  # Changed to True for server deployment
+                        headless=False  # Changed to True for server deployment
                     )
                     
                     if not resp:
