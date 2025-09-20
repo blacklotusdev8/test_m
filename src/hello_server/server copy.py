@@ -432,7 +432,20 @@ def create_server():
 
                 errors: list[str] = []
 
-                
+                # 1) Try DynamicFetcher first (avoids strict stealth header generation)
+                if 'DynamicFetcher' in locals() and DynamicFetcher is not None:  # type: ignore
+                    try:
+                        page = DynamicFetcher.fetch(  # type: ignore
+                            url,
+                            headless=True,
+                            page_action=scroll_page,
+                        )
+                        if hasattr(page, "get_all_text"):
+                            return "res1"+ page.get_all_text()
+                        if hasattr(page, "content"):
+                            return "res2"+ page.content  # type: ignore[attr-defined]
+                    except Exception as e:
+                        errors.append(f"DynamicFetcher: {e}")
 
                 # 2) Try StealthyFetcher with relaxed options to avoid header generation failures
                 if 'StealthyFetcher' in locals() and StealthyFetcher is not None:  # type: ignore
@@ -440,7 +453,7 @@ def create_server():
                         page = StealthyFetcher.fetch(  # type: ignore
                             url,
                             headless=True,
-                            solve_cloudflare=True, 
+                            solve_cloudflare=False,  # relax CF solving to avoid strict header requirements
                             page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
@@ -451,22 +464,22 @@ def create_server():
                         errors.append(f"StealthyFetcher: {e}")
 
                 # 3) Direct Playwright fallback (avoid Scrapling header generation paths)
-               # 1) Try DynamicFetcher first (avoids strict stealth header generation)
-                if 'DynamicFetcher' in locals() and DynamicFetcher is not None:  # type: ignore
-                    try:
-                        page = DynamicFetcher.fetch(  # type: ignore
-                            url,
-                            headless=True,
-                            page_action=scroll_page,google_search=True,stealth=True
-                        )
-                        if hasattr(page, "get_all_text"):
-                            return "res1"+ page.get_all_text()
-                        if hasattr(page, "content"):
-                            return "res2"+ page.content  # type: ignore[attr-defined]
-                    except Exception as e:
-                        errors.append(f"DynamicFetcher: {e}")
+               
 
-                
+                # 4) Final fallback to basic Fetcher (static HTTP)
+                try:
+                    resp = Fetcher.fetch(url)
+                    if hasattr(resp, "get_all_text"):
+                        return "res5"+ resp.get_all_text()
+                    if hasattr(resp, "text"):
+                        return "res6"+resp.text  # type: ignore[attr-defined]
+                    if hasattr(resp, "content"):
+                        return "res7"+resp.content  # type: ignore[attr-defined]
+                    return "res8"+ str(resp)
+                except Exception as e:
+                    errors.append(f"Fetcher: {e}")
+                    return "All fetchers failed: " + " | ".join(errors)
+
             result = await loop.run_in_executor(None, scrape_generate_text)
             return result
         except Exception as e:
