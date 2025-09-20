@@ -438,7 +438,7 @@ def create_server():
                         target_url,
                         page_action=automate,
                         solve_cloudflare=True,
-                        headless=False,
+                        headless=True,
                         network_idle=True,  # if unsupported, TypeError below
                         google_search=True,
                         humanize=True,
