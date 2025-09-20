@@ -286,7 +286,7 @@ def create_server():
                                 pass
                         else:
                             # Wait for text response
-                            sleep(10)
+                            sleep(40)
                         
                         return page
                     except Exception as e:
