@@ -7,5 +7,3 @@ startCommand:
   configSchema:
     # JSON Schema defining the configuration options for the MCP.
     {}
-env:
-  ARENA_ALLOW_FALLBACKS: "true"
