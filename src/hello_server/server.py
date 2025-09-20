@@ -485,38 +485,15 @@ def create_server():
                 #     errors.append(f"Playwright: {e}")
 
                 # 2) DynamicFetcher (Playwright-based without stealth headers)
-                try:
-                    from scrapling.fetchers import DynamicFetcher  # type: ignore
-                    resp = DynamicFetcher.fetch(
-                        target_url,
-                        page_action=automate,
-                        headless=True,
-                    )
-                    cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
-                    if rt == "image":
-                        try:
-                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
-                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
-                        except Exception:
-                            img3 = None
-                            img1 = None
-                        cleaned["images"] = {"img1": img1, "img2": img3}
-                    text = getattr(resp, 'get_all_text', lambda: getattr(resp, 'content', ''))()
-                    if isinstance(text, bytes):
-                        text = text.decode(errors='ignore')
-                    cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
-                    return cleaned
-                except Exception as e:
-                    errors.append(f"DynamicFetcher: {e}")
 
-                # 3) StealthyFetcher with relaxed options (avoid google_search/humanize)
+                                # 3) StealthyFetcher with relaxed options (avoid google_search/humanize)
                 if True:
                     try:
                         from scrapling.fetchers import StealthyFetcher  # type: ignore
                         resp = StealthyFetcher.fetch(
                             target_url,
                             page_action=automate,
-                            solve_cloudflare=False,
+                            solve_cloudflare=True,
                             headless=True,
                         )
                         cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
@@ -537,6 +514,31 @@ def create_server():
                         errors.append(f"StealthyFetcher: {e}")
                 else:
                     errors.append("StealthyFetcher: disabled by ARENA_DISABLE_STEALTH=true")
+
+                try:
+                    from scrapling.fetchers import DynamicFetcher  # type: ignore
+                    resp = DynamicFetcher.fetch(
+                        target_url,
+                        page_action=automate,
+                        headless=True
+                    )
+                    cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
+                    if rt == "image":
+                        try:
+                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                        except Exception:
+                            img3 = None
+                            img1 = None
+                        cleaned["images"] = {"img1": img1, "img2": img3}
+                    text = getattr(resp, 'get_all_text', lambda: getattr(resp, 'content', ''))()
+                    if isinstance(text, bytes):
+                        text = text.decode(errors='ignore')
+                    cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
+                    return cleaned
+                except Exception as e:
+                    errors.append(f"DynamicFetcher: {e}")
+
 
                 # 4) Basic Fetcher (static HTTP)
                 try:
