@@ -244,6 +244,7 @@ def create_server():
             print("chack_RooBot_Box")
             try:
                 page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=500)
+                return True
             except Exception as e:
                 print(f"Could not accept cookies: {e}")
             print("accept cookies")
@@ -256,15 +257,19 @@ def create_server():
                     center_x = box["x"] + box["width"] / 2
                     center_y = box["y"] + box["height"] / 2
                     page.mouse.click(center_x, center_y)
+
                     print(f"Clicked on center of div.transition-opacity at ({center_x}, {center_y})")
+                    return True
                 else:
                     print("Could not get bounding box for div.transition-opacity")
             except Exception as e:
                 print(f"div.transition-opacity element not found or timeout - continuing... Error: {e}")
             try:
                 page.locator(SEL_ACCEPT_COOKIES_BUTTON).click(timeout=500)
+                return True
             except Exception as e:
                 print(f"Could not accept cookies: {e}")
+            return False
             
 
 
@@ -280,19 +285,110 @@ def create_server():
                 print("page wait for 5 seconds")
                 sleep(5)
                 print("start automate")
-                chack_RooBot_Box(page)
+                print(rt)
+                isNotRooBot=True
+                while isNotRooBot:
+                   isNotRooBot= chack_RooBot_Box(page)
+                   chack_RooBot_Box(page)
+                if rt == "image":
+                    chack_RooBot_Box(page)
+                    combobox_elements = page.get_by_role("combobox").all()
+                    i=0
+                    for combobox in combobox_elements:
+                        try:
+                            # Check if this is the model dropdown button
+                            sentry_element = combobox.get_attribute("data-sentry-element")
+                            sentry_file = combobox.get_attribute("data-sentry-source-file")
+                            
+                            if sentry_element == "Button" and sentry_file == "model-dropdown.tsx":
+                                i=i+1
+                                if(i==2):
+                                    # Click to open the dropdown
+                                    combobox.click(timeout=5000)
+                                    sleep(1)
+                                else:
+                                    continue
+                                target_models = ["seedream-4", "gpt-image-1", "qwen-image-edit"]
+                                try:
+                                    page.get_by_text("seedream-4").first.click(timeout=5000)
+                                    break
+                                except Exception as e:
+                                    print(f"Could not click on seedream-4: {e}")
+                                    try:
+                                        page.get_by_text("flux-1-kontext-pro").first.click(timeout=5000)
+                                        break
+                                    except Exception as e:
+                                        page.get_by_text("qwen-image-edit").first.click(timeout=5000)
+                                        break
+                                    
+                        except Exception as e:
+                            print(f"Error processing combobox element: {e}")   
 
-                if rt == "image" and image_path and os.path.exists(image_path):
+                if rt == "image" and image_path :
                     try:
-                        chack_RooBot_Box(page)
-                        input_file = page.locator('input[type="file"][accept*="image"]').all()
-                        print("get input_file")
-                        for i in input_file:
-                            try:
-                                i.set_input_files(image_path)
-                                break
-                            except Exception as e:
-                                print(f"Could not set input file: {e}")
+                        import requests
+                        import os
+                        import hashlib
+                        from pathlib import Path
+                        
+                        # Create downloads directory if it doesn't exist
+                        downloads_dir = Path("downloads")
+                        downloads_dir.mkdir(exist_ok=True)
+                        
+                        # Download image from URL with better error handling
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                        response = requests.get(image_path, headers=headers, timeout=30)
+                        response.raise_for_status()
+                        
+                        # Determine file extension from content type or URL
+                        content_type = response.headers.get('content-type', '')
+                        if 'jpeg' in content_type or 'jpg' in content_type:
+                            ext = '.jpg'
+                        elif 'png' in content_type:
+                            ext = '.png'
+                        elif 'webp' in content_type:
+                            ext = '.webp'
+                        else:
+                            # Fallback to URL extension or default to jpg
+                            ext = Path(image_path).suffix or '.jpg'
+                        
+                        # Create unique filename with hash
+                        image_hash = hashlib.md5(response.content).hexdigest()
+                        filename = f"downloaded_image_{image_hash}{ext}"
+                        temp_image_path = downloads_dir / filename
+                        
+                        # Write image to file with absolute path
+                        with open(temp_image_path, 'wb') as f:
+                            f.write(response.content)
+                        
+                        # Get absolute path for the image
+                        temp_image_path = str(temp_image_path.absolute())
+                        print("temp_image_path", temp_image_path)
+                        try:
+                            input_file = page.locator('input[type="file"][accept*="image"]').all()
+                            print("get input_file")
+                            for i in input_file:
+                                try:
+                                    i.set_input_files(temp_image_path)
+                                    break
+                                except Exception as e:
+                                    print(f"Could not set input file: {e}")
+                        except Exception as e:
+                            print(f"Could not set input file: {e}")            
+                        # finally:
+                            # Clean up temporary file
+                            # if os.path.exists(temp_image_path):
+                            #     os.unlink(temp_image_path)
+                        # input_file = page.locator('input[type="file"][accept*="image"]', timeout=1500).all()
+                        # print("get input_file")
+                        # for i in input_file:
+                        #     try:
+                        #         i.set_input_files(image_path)
+                        #         break
+                        #     except Exception as e:
+                        #         print(f"Could not set input file: {e}")
                     except Exception as e:
                         chack_RooBot_Box(page)
                         print(f"Error locating image input: {e}")
@@ -302,25 +398,37 @@ def create_server():
 
                 try:
                     chack_RooBot_Box(page)
-                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=10000)
+                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=100)
                     page.locator(SEL_INPUT).fill(prompt)
                 except Exception as e:
                     print("Input textarea not found or fill failed - continuing...", e)
 
                 try:
                     print("waiting for submit button")
-                    page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=10000)
+                    page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=500)
                     page.locator(SEL_SUBMIT_BUTTON).click()
                 except Exception as e:
                     print("Submit button not found or click failed - continuing...", e)
 
                 try:
                     print("waiting for ok button")
-                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=10000)
+                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=500)
                     page.locator(SEL_OK_BUTTON).click()
                 except Exception as e:
                     print("OK button not found or click failed - continuing...", e)
+                try:
+                    
+                    page.wait_for_selector(SEL_IMG_3, state="visible", timeout=120000)
+                    print("waiting for img 2")
+                    page.wait_for_selector(SEL_IMG_1, state="visible", timeout=120000)
+                    print("waiting for img 1")
 
+
+                except Exception as e:
+                    print(f"Could not wait for selector: {e}")
+
+                if os.path.exists(temp_image_path):
+                    os.unlink(temp_image_path)
                 return page
 
             try:
@@ -330,7 +438,7 @@ def create_server():
                         target_url,
                         page_action=automate,
                         solve_cloudflare=True,
-                        headless=True,
+                        headless=False,
                         network_idle=True,  # if unsupported, TypeError below
                         google_search=True,
                         humanize=True,
