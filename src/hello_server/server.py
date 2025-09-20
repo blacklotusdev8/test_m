@@ -356,8 +356,8 @@ def create_server():
                         solve_cloudflare=True,
                         headless=True,
                         network_idle=True,  # if unsupported, TypeError below
-                        google_search=True,
-                        humanize=True,
+                        google_search=False,
+                        humanize=False,
                     )
                     text=resp.get_all_text()
                     if(rt == "image"):
