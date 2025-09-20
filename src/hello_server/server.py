@@ -323,7 +323,7 @@ def create_server():
                         google_search=True,
                         humanize=True,
                         solve_cloudflare=True,
-                        headless=False  # Changed to True for server deployment
+                        headless=True  # Changed to True for server deployment
                     )
                     
                     if not resp:
