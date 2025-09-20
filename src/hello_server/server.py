@@ -59,9 +59,9 @@ def create_server():
             return str(e)
     
     @server.tool()
-    async def lmarena(request_type: str, user_message: str, ctx: Context) -> dict:
+    async def ai_generate(request_type: str, user_message: str, ctx: Context) -> dict:
         """
-        Interact with lmarena.ai for AI model responses.
+        Interact with ai for AI model responses.
         
         Args:
             request_type: Type of request - "text", "image", or "web_search"
