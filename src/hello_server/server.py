@@ -8,6 +8,9 @@ from typing import Any
 def create_server():
     """Create and configure the MCP server."""
     server = FastMCP("Say Hello")
+    server.settings.debug = True
+    server._setup_handlers()
+    
     
     @server.tool()
     def hello(name: str, ctx: Context) -> str:
@@ -247,6 +250,7 @@ def create_server():
             except Exception as e:
                 print(f"Could not accept cookies: {e}")
             print("accept cookies")
+            sleep(1)
             try:
                 print("Looking for div.transition-opacity element...")
                 page.wait_for_selector(SEL_TRANSITION_OPACITY, state="visible", timeout=600)
@@ -271,18 +275,23 @@ def create_server():
         def run_session(rt: str, prompt: str) -> dict:
             # Choose target URL
             target_url = url
+            resp = None
+            img3=""
+            img1=""
             if rt == "image":
                 target_url = url_image
             elif rt in ("web_search", "search"):
                 target_url = url_web_search
-
+            from playwright.sync_api import Page
             def automate(page: Any):
                 print("page wait for 5 seconds")
                 sleep(5)
                 print("start automate")
                 chack_RooBot_Box(page)
 
-                if rt == "image" and image_path and os.path.exists(image_path):
+                page.screenshot(path="screenshot1.png", full_page=True)
+
+                if rt == "image" and image_path :
                     try:
                         chack_RooBot_Box(page)
                         input_file = page.locator('input[type="file"][accept*="image"]').all()
@@ -299,28 +308,43 @@ def create_server():
                 else:
                     chack_RooBot_Box(page)
                     print("waiting for text response")
+                page.screenshot(path="screenshot2.png", full_page=True)
 
                 try:
                     chack_RooBot_Box(page)
-                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=10000)
+                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=500)
                     page.locator(SEL_INPUT).fill(prompt)
                 except Exception as e:
                     print("Input textarea not found or fill failed - continuing...", e)
-
+                page.screenshot(path="screenshot3.png", full_page=True)
                 try:
                     print("waiting for submit button")
-                    page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=10000)
-                    page.locator(SEL_SUBMIT_BUTTON).click()
+                    page.keyboard.press("Enter")
+                    sleep(1)
+                    # page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=500)
+                    # page.locator(SEL_SUBMIT_BUTTON).click()
                 except Exception as e:
                     print("Submit button not found or click failed - continuing...", e)
 
                 try:
                     print("waiting for ok button")
-                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=10000)
+                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=1000)
                     page.locator(SEL_OK_BUTTON).click()
                 except Exception as e:
                     print("OK button not found or click failed - continuing...", e)
+                sleep(1)    
+                page.screenshot(path="screenshot4.png", full_page=True)
 
+                try:
+                    page.wait_for_selector(SEL_IMG_1, state="visible", timeout=25000)
+                    page.wait_for_selector(SEL_IMG_3, state="visible", timeout=25000)
+
+                except Exception as e:
+                    print(f"Error in chack_RooBot_Box after submit: {e}")    
+                sleep(10)
+                page.screenshot(path="screenshot5.png", full_page=True)
+
+                print("Waiting for response to load...")
                 return page
 
             try:
@@ -335,6 +359,15 @@ def create_server():
                         google_search=True,
                         humanize=True,
                     )
+                    text=resp.get_all_text()
+                    if(rt == "image"):
+                        try:
+                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                        except Exception:
+                            img3 = None
+                            img1 = None
+                    print("Raw extracted text length: \n",text)
                 except TypeError:
                     # Retry with minimal options if fetch signature differs
                     resp = StealthyFetcher.fetch(
@@ -343,36 +376,28 @@ def create_server():
                         solve_cloudflare=True,
                         headless=True,
                     )
-                except Exception as e:
-                    # As a last retry, relax CF solving
-                    try:
-                        resp = StealthyFetcher.fetch(
-                            target_url,
-                            page_action=automate,
-                            solve_cloudflare=False,
-                            headless=True,
-                        )
-                    except Exception:
-                        print(f"Could not fetch page: {e}")
-                        return {"error": "FetchFailed", "error_type": "FetchFailed", "message": str(e)}
-
+                    text=resp.get_all_text()
+                    if(rt == "image"):
+                        try:
+                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                        except Exception:
+                            img3 = None
+                            img1 = None
                 if not resp:
                     return {"error": "EmptyResponse", "error_type": "EmptyResponse"}
 
                 cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
                 if rt == "image":
-                    try:
-                        img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
-                        img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
-                    except Exception:
-                        img3 = None
-                        img1 = None
+                   
                     cleaned["images"] = {"img1": img1, "img2": img3}
-                    text = getattr(resp, 'get_all_text', lambda: '')()
+                    #text = getattr(resp, 'get_all_text', lambda: '')()
                     cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
                 else:
-                    text = getattr(resp, 'get_all_text', lambda: '')()
+                    #text = resp.text.get_all()
+                    print("Raw extracted text length: \n",text)
                     cleaned = clean_and_separate_text(text, user_prompt=prompt)
+                    print("Extracted text:", cleaned.get("content", "")[:200], "..."+"\n"+text[-200:])
                 return cleaned
             except Exception as e:
                 tb = traceback.format_exc()
@@ -404,7 +429,7 @@ def create_server():
         """
         return await arena_session("image", user_message, image_path, ctx)
     @server.tool()
-    async def scrape(url: str, ctx: Context) -> str:
+    async def scrape(url, ctx: Context) -> str:
         """Scrape a website."""
         try:
             loop = asyncio.get_running_loop()

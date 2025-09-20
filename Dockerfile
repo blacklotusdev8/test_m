@@ -1,4 +1,4 @@
-FROM python:3.12-bookworm
+FROM mcr.microsoft.com/playwright/python:v1.54.0-noble
 
 WORKDIR /app
 
