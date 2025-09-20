@@ -280,16 +280,23 @@ def create_server():
                 target_url = url_image
             elif rt in ("web_search", "search"):
                 target_url = url_web_search
+            # Feature flags via env
+            disable_stealth = os.getenv("ARENA_DISABLE_STEALTH", "true").lower() in ("1", "true", "yes")
 
             def automate(page: Any):
                 print("page wait for 5 seconds")
                 sleep(5)
                 print("start automate")
                 print(rt)
-                isNotRooBot=True
-                while isNotRooBot:
-                   isNotRooBot= chack_RooBot_Box(page)
-                   chack_RooBot_Box(page)
+                # Try a few times to clear overlays/cookie banners
+                for _ in range(3):
+                    try:
+                        if chack_RooBot_Box(page):
+                            sleep(0.3)
+                            continue
+                    except Exception:
+                        pass
+                    break
                 if rt == "image":
                     chack_RooBot_Box(page)
                     combobox_elements = page.get_by_role("combobox").all()
@@ -324,7 +331,8 @@ def create_server():
                         except Exception as e:
                             print(f"Error processing combobox element: {e}")   
 
-                if rt == "image" and image_path :
+                temp_image_path = None
+                if rt == "image" and image_path:
                     try:
                         import requests
                         import os
@@ -398,21 +406,21 @@ def create_server():
 
                 try:
                     chack_RooBot_Box(page)
-                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=100)
+                    page.wait_for_selector(SEL_INPUT, state="visible", timeout=10000)
                     page.locator(SEL_INPUT).fill(prompt)
                 except Exception as e:
                     print("Input textarea not found or fill failed - continuing...", e)
 
                 try:
                     print("waiting for submit button")
-                    page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=500)
+                    page.wait_for_selector(SEL_SUBMIT_BUTTON, state="visible", timeout=10000)
                     page.locator(SEL_SUBMIT_BUTTON).click()
                 except Exception as e:
                     print("Submit button not found or click failed - continuing...", e)
 
                 try:
                     print("waiting for ok button")
-                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=500)
+                    page.wait_for_selector(SEL_OK_BUTTON, state="visible", timeout=10000)
                     page.locator(SEL_OK_BUTTON).click()
                 except Exception as e:
                     print("OK button not found or click failed - continuing...", e)
@@ -427,61 +435,124 @@ def create_server():
                 except Exception as e:
                     print(f"Could not wait for selector: {e}")
 
-                if os.path.exists(temp_image_path):
-                    os.unlink(temp_image_path)
+                try:
+                    if temp_image_path and os.path.exists(temp_image_path):
+                        os.unlink(temp_image_path)
+                except Exception:
+                    pass
                 return page
 
             try:
+                errors: list[str] = []
+
+                # 1) Playwright-first to avoid stealth header generation paths entirely
+                # try:
+                #     from playwright.sync_api import sync_playwright  # type: ignore
+                #     with sync_playwright() as p:
+                #         browser = p.chromium.launch(headless=True, args=[
+                #             "--no-sandbox",
+                #             "--disable-dev-shm-usage",
+                #         ])
+                #         context = browser.new_context()
+                #         page = context.new_page()
+                #         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+                #         try:
+                #             automate(page)
+                #         except Exception as ae:
+                #             # Keep going even if automation has issues; capture content anyway
+                #             print("automate() error (Playwright path)", ae)
+                #         # Prefer text over HTML to feed the cleaner
+                #         try:
+                #             text = page.inner_text("body")
+                #         except Exception:
+                #             text = page.content()
+                #         imgs = {}
+                #         if rt == "image":
+                #             try:
+                #                 img3 = page.locator(SEL_IMG_3).get_attribute("src")
+                #             except Exception:
+                #                 img3 = None
+                #             try:
+                #                 img1 = page.locator(SEL_IMG_1).get_attribute("src")
+                #             except Exception:
+                #                 img1 = None
+                #             imgs = {"img1": img1, "img2": img3}
+                #         browser.close()
+                #         cleaned = {"images": imgs, "raw_sources_text": "", "content": "", "sources": []}
+                #         cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
+                #         return cleaned
+                # except Exception as e:
+                #     errors.append(f"Playwright: {e}")
+
+                # 2) DynamicFetcher (Playwright-based without stealth headers)
                 try:
-                    # Try with extended options first
-                    resp = StealthyFetcher.fetch(
+                    from scrapling.fetchers import DynamicFetcher  # type: ignore
+                    resp = DynamicFetcher.fetch(
                         target_url,
                         page_action=automate,
-                        solve_cloudflare=True,
-                        headless=True,
-                        network_idle=True,  # if unsupported, TypeError below
-                        google_search=True,
-                        humanize=True,
-                    )
-                except TypeError:
-                    # Retry with minimal options if fetch signature differs
-                    resp = StealthyFetcher.fetch(
-                        target_url,
-                        page_action=automate,
-                        solve_cloudflare=True,
                         headless=True,
                     )
+                    cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
+                    if rt == "image":
+                        try:
+                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                        except Exception:
+                            img3 = None
+                            img1 = None
+                        cleaned["images"] = {"img1": img1, "img2": img3}
+                    text = getattr(resp, 'get_all_text', lambda: getattr(resp, 'content', ''))()
+                    if isinstance(text, bytes):
+                        text = text.decode(errors='ignore')
+                    cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
+                    return cleaned
                 except Exception as e:
-                    # As a last retry, relax CF solving
+                    errors.append(f"DynamicFetcher: {e}")
+
+                # 3) StealthyFetcher with relaxed options (avoid google_search/humanize)
+                if True:
                     try:
+                        from scrapling.fetchers import StealthyFetcher  # type: ignore
                         resp = StealthyFetcher.fetch(
                             target_url,
                             page_action=automate,
                             solve_cloudflare=False,
                             headless=True,
                         )
-                    except Exception:
-                        print(f"Could not fetch page: {e}")
-                        return {"error": "FetchFailed", "error_type": "FetchFailed", "message": str(e)}
-
-                if not resp:
-                    return {"error": "EmptyResponse", "error_type": "EmptyResponse"}
-
-                cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
-                if rt == "image":
-                    try:
-                        img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
-                        img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
-                    except Exception:
-                        img3 = None
-                        img1 = None
-                    cleaned["images"] = {"img1": img1, "img2": img3}
-                    text = getattr(resp, 'get_all_text', lambda: '')()
-                    cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
+                        cleaned = {"images": {}, "raw_sources_text": "", "content": "", "sources": []}
+                        if rt == "image":
+                            try:
+                                img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                                img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                            except Exception:
+                                img3 = None
+                                img1 = None
+                            cleaned["images"] = {"img1": img1, "img2": img3}
+                        text = getattr(resp, 'get_all_text', lambda: getattr(resp, 'content', ''))()
+                        if isinstance(text, bytes):
+                            text = text.decode(errors='ignore')
+                        cleaned.update(clean_and_separate_text(text, user_prompt=prompt))
+                        return cleaned
+                    except Exception as e:
+                        errors.append(f"StealthyFetcher: {e}")
                 else:
-                    text = getattr(resp, 'get_all_text', lambda: '')()
+                    errors.append("StealthyFetcher: disabled by ARENA_DISABLE_STEALTH=true")
+
+                # 4) Basic Fetcher (static HTTP)
+                try:
+                    from scrapling.fetchers import Fetcher  # type: ignore
+                    resp = Fetcher.fetch(target_url)
+                    text = getattr(resp, 'get_all_text', lambda: getattr(resp, 'text', getattr(resp, 'content', '')))()
+                    if isinstance(text, bytes):
+                        text = text.decode(errors='ignore')
                     cleaned = clean_and_separate_text(text, user_prompt=prompt)
-                return cleaned
+                    cleaned.setdefault('images', {})
+                    cleaned.setdefault('sources', [])
+                    cleaned.setdefault('raw_sources_text', '')
+                    return cleaned
+                except Exception as e:
+                    errors.append(f"Fetcher: {e}")
+                    return {"error": "FetchFailed", "error_type": "FetchFailed", "message": " | ".join(errors)}
             except Exception as e:
                 tb = traceback.format_exc()
                 print("arena_session error", e)
@@ -599,4 +670,4 @@ def create_server():
 
 if __name__ == "__main__":
     server = create_server()
-    server.run(transport="streamable-http")
+    server.run(transport="http", port=8081)
