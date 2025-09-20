@@ -308,46 +308,164 @@ def create_server():
                                 pass
                         else:
                             # Wait for text response
-                            sleep(40)
+                            sleep(10)
                         
                         return page
                     except Exception as e:
                         raise RuntimeError(f"Automation failed: {e}")
                 
-                # Fetch the page with automation
+                # Try different fetch methods with fallback
+                errors = []
+                resp = None
+
+                # Method 1: StealthyFetcher with solve_cloudflare=True (strict)
+                try:
+                    # Use Firefox-consistent headers; avoid Chromium-only client hints to prevent conflicts
+                    extra_headers = {
+                        "accept-language": "en-US,en;q=0.9",
+                        "upgrade-insecure-requests": "1",
+                    }
+                    resp = StealthyFetcher.fetch(
+                        target_url,
+                        page_action=automate,
+                        network_idle=True,
+                        solve_cloudflare=True,
+                        humanize=True,
+                        headless=True,
+                        extra_headers=extra_headers,
+                    )
+                    if resp:
+                        result = {"content": "", "sources": [], "raw_sources_text": ""}
+                        if request_type == "image":
+                            try:
+                                img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                                img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                                result["images"] = {"img1": img1, "img3": img3}
+                            except Exception:
+                                result["images"] = {"img1": None, "img3": None}
+                        else:
+                            text = resp.get_all_text()
+                            result = clean_and_separate_text(text, user_message)
+                        return result
+                except Exception as e:
+                    errors.append(f"StealthyFetcher(solve_cf): {str(e)}")
+                
+                # Method 1: Try direct Playwright first (avoids header generation issues)
+                try:
+                    from playwright.sync_api import sync_playwright  # type: ignore
+                    
+                    with sync_playwright() as p:
+                        browser = p.chromium.launch(
+                            headless=True,
+                            args=[
+                                "--no-sandbox",
+                                "--disable-dev-shm-usage",
+                                "--disable-blink-features=AutomationControlled",
+                                "--disable-features=site-per-process",
+                                "--disable-web-security",
+                            ]
+                        )
+                        context = browser.new_context(
+                            viewport={"width": 1920, "height": 1080},
+                            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        )
+                        page = context.new_page()
+                        
+                        # Run automation with Playwright page
+                        automate(page)
+                        
+                        # Get content
+                        html_content = page.content()
+                        text_content = page.evaluate("() => document.body.innerText")
+                        
+                        # Extract images if needed
+                        images = {}
+                        if request_type == "image":
+                            try:
+                                img1_elem = page.query_selector(SEL_IMG_1)
+                                img3_elem = page.query_selector(SEL_IMG_3)
+                                images["img1"] = img1_elem.get_attribute("src") if img1_elem else None
+                                images["img3"] = img3_elem.get_attribute("src") if img3_elem else None
+                            except:
+                                images = {"img1": None, "img3": None}
+                        
+                        browser.close()
+                        
+                        # Process results
+                        if request_type == "image":
+                            result = {
+                                "content": text_content if text_content else "",
+                                "sources": [],
+                                "raw_sources_text": "",
+                                "images": images
+                            }
+                        else:
+                            result = clean_and_separate_text(text_content, user_message)
+                            if request_type == "image":
+                                result["images"] = images
+                        
+                        return result
+                        
+                except Exception as e:
+                    errors.append(f"Playwright: {str(e)}")
+                
+                # Method 2: Try StealthyFetcher with relaxed options
                 try:
                     resp = StealthyFetcher.fetch(
                         target_url,
                         page_action=automate,
                         network_idle=True,
-                        google_search=True,
-                        humanize=True,
-                        solve_cloudflare=True,
-                        headless=True  # Changed to True for server deployment
+                        solve_cloudflare=False,  # Disable to avoid header generation
+                        humanize=False,  # Disable to avoid header issues
+                        headless=True
                     )
                     
-                    if not resp:
-                        return {"error": "Empty response from StealthyFetcher"}
-                    
-                    result = {"content": "", "sources": [], "raw_sources_text": ""}
-                    
-                    # Extract images if image mode
-                    if request_type == "image":
-                        try:
-                            img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
-                            img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
-                            result["images"] = {"img1": img1, "img3": img3}
-                        except:
-                            result["images"] = {"img1": None, "img3": None}
-                    else:
-                        # Extract and clean text
-                        text = resp.get_all_text()
-                        result = clean_and_separate_text(text, user_message)
-                    
-                    return result
-                    
+                    if resp:
+                        result = {"content": "", "sources": [], "raw_sources_text": ""}
+                        
+                        if request_type == "image":
+                            try:
+                                img1 = resp.css_first(f"{SEL_IMG_1}::attr(src)")
+                                img3 = resp.css_first(f"{SEL_IMG_3}::attr(src)")
+                                result["images"] = {"img1": img1, "img3": img3}
+                            except:
+                                result["images"] = {"img1": None, "img3": None}
+                        else:
+                            text = resp.get_all_text()
+                            result = clean_and_separate_text(text, user_message)
+                        
+                        return result
+                        
                 except Exception as e:
-                    return {"error": str(e), "error_type": e.__class__.__name__}
+                    errors.append(f"StealthyFetcher: {str(e)}")
+                
+                # Method 3: Try basic Fetcher (no automation, just static)
+                try:
+                    from scrapling.fetchers import Fetcher  # type: ignore
+                    basic_resp = Fetcher.fetch(target_url)
+                    
+                    if basic_resp:
+                        if hasattr(basic_resp, 'get_all_text'):
+                            text = basic_resp.get_all_text()
+                        elif hasattr(basic_resp, 'text'):
+                            text = basic_resp.text
+                        else:
+                            text = str(basic_resp)
+                        
+                        return {
+                            "content": text[:1000] + "... (Note: Limited functionality without browser automation)",
+                            "sources": [],
+                            "raw_sources_text": "",
+                            "error": "Fallback to basic fetcher - limited functionality"
+                        }
+                except Exception as e:
+                    errors.append(f"Fetcher: {str(e)}")
+                
+                # All methods failed
+                return {
+                    "error": "All fetch methods failed: " + " | ".join(errors),
+                    "error_type": "MultiFetchError"
+                }
             
             result = await loop.run_in_executor(None, run_lmarena_session)
             return result
@@ -361,4 +479,4 @@ def create_server():
 
 if __name__ == "__main__":
     server = create_server()
-    server.run(transport="streamable-http")
+    server.run(transport="http", port=8081)
