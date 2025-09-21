@@ -455,7 +455,6 @@ def create_server():
                         page = StealthyFetcher.fetch(  # type: ignore
                             url,
                             headless=True,
-                            solve_cloudflare=True,  # relax CF solving to avoid strict header requirements
                             page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
