@@ -465,7 +465,7 @@ def create_server():
                         page = StealthyFetcher.fetch(  # type: ignore
                             url,
                             headless=True,
-                            solve_cloudflare=True, 
+                            solve_cloudflare=True,  # relax CF solving to avoid strict header requirements
                             page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
@@ -475,14 +475,13 @@ def create_server():
                     except Exception as e:
                         errors.append(f"StealthyFetcher: {e}")
 
-                # 3) Direct Playwright fallback (avoid Scrapling header generation paths)
                # 1) Try DynamicFetcher first (avoids strict stealth header generation)
                 if 'DynamicFetcher' in locals() and DynamicFetcher is not None:  # type: ignore
                     try:
                         page = DynamicFetcher.fetch(  # type: ignore
                             url,
                             headless=True,
-                            page_action=scroll_page,google_search=True,stealth=True
+                            page_action=scroll_page,
                         )
                         if hasattr(page, "get_all_text"):
                             return "res1"+ page.get_all_text()
@@ -490,8 +489,7 @@ def create_server():
                             return "res2"+ page.content  # type: ignore[attr-defined]
                     except Exception as e:
                         errors.append(f"DynamicFetcher: {e}")
-
-                
+               
             result = await loop.run_in_executor(None, scrape_generate_text)
             return result
         except Exception as e:
