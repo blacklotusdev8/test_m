@@ -35,17 +35,10 @@ def create_server():
             return {"error": str(e) or repr(e), "error_type": e.__class__.__name__}
 
         # Selectors (provided by user)
-        SEL_OPEN_MENU_BTN = r'button.border-border:nth-child(1)'
-        SEL_SIDE_BY_SIDE_TEXT = "div.hover\:bg-surface-highlight:nth-child(2)"
-        SEL_TOP_RIGHT_BUTTON = r'.max-w-full > div:nth-child(2) > div:nth-child(1) > form:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > button:nth-child(2)'
         SEL_INPUT = r'#chat-area > div.flex.min-h-0.flex-1.justify-center.overflow-hidden.overscroll-none > main > div.flex.w-full.flex-1.flex-col.items-center.justify-center.px-4 > div > div.relative.hidden.w-full.max-w-full.sm\:block > div.bg-surface-primary.relative.flex.flex-col.rounded-\[0\.9rem\].md\:items-center.md\:gap-2 > div > form > div.flex.w-full.flex-col.justify-between.gap-1.md\:gap-2 > textarea'
-        SEL_SUBMIT_BUTTON = r'#chat-area > div.flex.min-h-0.flex-1.justify-center.overflow-hidden.overscroll-none > main > div.flex.w-full.flex-1.flex-col.items-center.justify-center.px-4 > div > div.relative.hidden.w-full.max-w-full.sm\:block > div.bg-surface-primary.relative.flex.flex-col.rounded-\[0\.9rem\].md\:items-center.md\:gap-2 > div > form > div.flex.w-full.flex-col.justify-between.gap-1.md\:gap-2 > div > div.flex.items-center.gap-2 > button'
         SEL_OK_BUTTON = r'button.px-4:nth-child(1)'
         SEL_ACCEPT_COOKIES_BUTTON = r'button.py-3:nth-child(2)'
-        SEL_CLOUDFLARE_CHECKBOX = r'.cb-lb > input:nth-child(1)'
         SEL_TRANSITION_OPACITY = r'div.transition-opacity'
-        SEL_FILE_UPLOAD_BUTTON = r'.sm\:block > div:nth-child(2) > div:nth-child(1) > form:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > button:nth-child(1)'
-        SEL_FILE_INPUT = r'.sm\:block > div:nth-child(2) > div:nth-child(1) > form:nth-child(1) > div:nth-child(1) > input:nth-child(1)'
         SEL_IMG_3 = r'#chat-area > div.flex.min-h-0.flex-1.justify-center.overflow-hidden.overscroll-none > main > div > div > div.relative.overflow-hidden.-mb-4.min-h-0.flex-1 > div > div > div > div > ol > div.flex.min-w-0.flex-col.gap-2.lg\:flex-row.lg\:gap-3 > div:nth-child(3) > div.no-scrollbar.relative.flex.w-full.flex-1.flex-col.overflow-x-auto.border-border-faint.border-t > div > div.flex.w-full.flex-row.items-center.gap-2.justify-center > div > div > img'
         SEL_IMG_1 = r'#chat-area > div.flex.min-h-0.flex-1.justify-center.overflow-hidden.overscroll-none > main > div > div > div.relative.overflow-hidden.-mb-4.min-h-0.flex-1 > div > div > div > div > ol > div.flex.min-w-0.flex-col.gap-2.lg\:flex-row.lg\:gap-3 > div:nth-child(1) > div.no-scrollbar.relative.flex.w-full.flex-1.flex-col.overflow-x-auto.border-border-faint.border-t > div > div.flex.w-full.flex-row.items-center.gap-2.justify-center > div > div > img'
 
@@ -426,7 +419,7 @@ def create_server():
         """
         return await arena_session("image", user_message, image_path, ctx)
     @server.tool()
-    async def scrape(url, ctx: Context) -> any:
+    async def scrape(url, ctx: Context) -> str:
         """Scrape a website."""
         try:
             loop = asyncio.get_running_loop()
@@ -491,7 +484,7 @@ def create_server():
                         errors.append(f"DynamicFetcher: {e}")
                
             result = await loop.run_in_executor(None, scrape_generate_text)
-            return result
+            return "result="+ result
         except Exception as e:
             return str(e)
         
