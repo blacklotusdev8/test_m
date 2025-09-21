@@ -426,7 +426,7 @@ def create_server():
         """
         return await arena_session("image", user_message, image_path, ctx)
     @server.tool()
-    async def scrape(url, ctx: Context) -> str:
+    async def scrape(url, ctx: Context) -> any:
         """Scrape a website."""
         try:
             loop = asyncio.get_running_loop()
