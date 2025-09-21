@@ -355,9 +355,6 @@ def create_server():
                         page_action=automate,
                         solve_cloudflare=True,
                         headless=True,
-                        network_idle=True,  # if unsupported, TypeError below
-                        google_search=False,
-                        humanize=False,
                     )
                     text=resp.get_all_text()
                     if(rt == "image"):
@@ -481,8 +478,11 @@ def create_server():
                         page = DynamicFetcher.fetch(  # type: ignore
                             url,
                             headless=True,
+                            stealth=True,
+                            
                             page_action=scroll_page,
                         )
+                        
                         if hasattr(page, "get_all_text"):
                             return "res1"+ page.get_all_text()
                         if hasattr(page, "content"):
