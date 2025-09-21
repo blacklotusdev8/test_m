@@ -483,7 +483,9 @@ def create_server():
                         errors.append(f"DynamicFetcher: {e}")
                
             result = await loop.run_in_executor(None, scrape_generate_text)
-            return "result="+ result
+            if not result:
+                raise ValueError("Empty response from scraper")
+            return  result
         except Exception as e:
             return str(e)
         
